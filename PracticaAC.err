@@ -1,4 +1,0 @@
-Message[302] E:\REPOS\PRACTICAAC.ASM 22 : Register in operand not in bank 0.  Ensure that bank bits are correct.
-Message[302] E:\REPOS\PRACTICAAC.ASM 26 : Register in operand not in bank 0.  Ensure that bank bits are correct.
-Warning[207] E:\REPOS\PRACTICAAC.ASM 38 : Found label after column 1. (PRESIONAR)
-Warning[207] E:\REPOS\PRACTICAAC.ASM 43 : Found label after column 1. (SOLTAR)
