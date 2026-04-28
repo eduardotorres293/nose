@@ -125,7 +125,7 @@ namespace Practica2
                 case "caracter": return "char";
                 case "Cadena": return "string";
                 case "true":
-                case "false": return "bool";
+                case "false": return "bool"; //hola
             }
             if (nodo.Valor == "()")
                 return InferirTipo(nodo.Izquierdo);
