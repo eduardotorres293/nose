@@ -116,7 +116,7 @@ namespace Practica2
 
         private string InferirTipo(NodoExpresion nodo)
         {
-            if (nodo == null) return "?";
+            if (nodo == null) return "?"; //asdasdasd
 
             switch (nodo.Valor)
             {
