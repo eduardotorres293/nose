@@ -22,18 +22,21 @@ namespace Practica2
         private List<SimboloFuncion> TablaFunciones = new List<SimboloFuncion>();
         private Stack<List<SimboloVariable>> PilaAmbitos = new Stack<List<SimboloVariable>>();
 
-        // ── Nodo del árbol de expresiones ────────────────────────────────────
         class NodoExpresion
         {
             public string Valor;
             public NodoExpresion Izquierdo;
             public NodoExpresion Derecho;
+            public double? ValorNumerico;
+            public string TipoInferido;
 
             public NodoExpresion(string valor, NodoExpresion izq = null, NodoExpresion der = null)
             {
                 Valor = valor;
                 Izquierdo = izq;
                 Derecho = der;
+                ValorNumerico = null;
+                TipoInferido = "?";
             }
         }
 
@@ -75,6 +78,114 @@ namespace Practica2
             analizarToolStripMenuItem.Enabled = false;
         }
 
+        private double? EvaluarNodo(NodoExpresion nodo)
+        {
+            if (nodo == null) return null;
+
+            if (nodo.Valor == "numero" || nodo.Valor == "numero_real")
+                return nodo.ValorNumerico;
+
+            if (nodo.Valor == "true") return 1;
+            if (nodo.Valor == "false") return 0;
+            if (nodo.Valor == "()")
+                return EvaluarNodo(nodo.Izquierdo);
+
+            double? izq = EvaluarNodo(nodo.Izquierdo);
+            double? der = EvaluarNodo(nodo.Derecho);
+
+            if (izq == null || der == null) return null;
+
+            switch (nodo.Valor)
+            {
+                case "+": return izq + der;
+                case "-": return izq - der;
+                case "*": return izq * der;
+                case "/": return der != 0 ? izq / der : (double?)null;
+                case "%": return der != 0 ? izq % der : (double?)null;
+                case "==": return izq == der ? 1 : 0;
+                case "!=": return izq != der ? 1 : 0;
+                case "<": return izq < der ? 1 : 0;
+                case ">": return izq > der ? 1 : 0;
+                case "<=": return izq <= der ? 1 : 0;
+                case ">=": return izq >= der ? 1 : 0;
+                case "&&": return (izq != 0 && der != 0) ? 1 : 0;
+                case "||": return (izq != 0 || der != 0) ? 1 : 0;
+                default: return null;
+            }
+        }
+
+        private string InferirTipo(NodoExpresion nodo)
+        {
+            if (nodo == null) return "?";
+
+            switch (nodo.Valor)
+            {
+                case "numero": return "int";
+                case "numero_real": return "float";
+                case "caracter": return "char";
+                case "Cadena": return "string";
+                case "true":
+                case "false": return "bool";
+            }
+            if (nodo.Valor == "()")
+                return InferirTipo(nodo.Izquierdo);
+
+            if (nodo.Valor == "==" || nodo.Valor == "!=" ||
+                nodo.Valor == "<" || nodo.Valor == ">" ||
+                nodo.Valor == "<=" || nodo.Valor == ">=" ||
+                nodo.Valor == "&&" || nodo.Valor == "||")
+                return "bool";
+
+            if (nodo.Valor == "+" || nodo.Valor == "-" ||
+                nodo.Valor == "*" || nodo.Valor == "/" || nodo.Valor == "%")
+            {
+                string tIzq = InferirTipo(nodo.Izquierdo);
+                string tDer = InferirTipo(nodo.Derecho);
+
+                if (tIzq == "string" || tDer == "string") return "string";
+                if (tIzq == "float" || tDer == "float") return "float";
+                if (tIzq == "int" && tDer == "int") return "int";
+                return "?";
+            }
+
+            if (nodo.Valor.StartsWith("func:")) return "?";
+
+            foreach (var ambito in PilaAmbitos)
+            {
+                var sim = ambito.FirstOrDefault(v => v.Nombre == nodo.Valor);
+                if (sim != null) return sim.Tipo;
+            }
+
+            return "?";
+        }
+
+        private void VerificarTipos(NodoExpresion nodo)
+        {
+            if (nodo == null) return;
+
+            VerificarTipos(nodo.Izquierdo);
+            VerificarTipos(nodo.Derecho);
+
+            if (nodo.Izquierdo == null || nodo.Derecho == null) return;
+
+            string tIzq = InferirTipo(nodo.Izquierdo);
+            string tDer = InferirTipo(nodo.Derecho);
+
+            if ((nodo.Valor == "-" || nodo.Valor == "*" || nodo.Valor == "/" || nodo.Valor == "%") &&
+                (tIzq == "string" || tDer == "string"))
+            {
+                richTextBox2.AppendText(
+                    $"Advertencia tipos: operador '{nodo.Valor}' no aplica a string, línea {Numero_linea}\n");
+            }
+
+            if ((nodo.Valor == "+" || nodo.Valor == "-" || nodo.Valor == "*" || nodo.Valor == "/") &&
+                (tIzq == "bool" || tDer == "bool"))
+            {
+                richTextBox2.AppendText(
+                    $"Advertencia tipos: operador '{nodo.Valor}' mezcla booleano con numérico, línea {Numero_linea}\n");
+            }
+        }
+
         private void EntrarAmbito() => PilaAmbitos.Push(new List<SimboloVariable>());
 
         private void SalirAmbito()
@@ -104,48 +215,44 @@ namespace Practica2
             direccionActual += 4;
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  ÁRBOL DE EXPRESIONES
-        // ════════════════════════════════════════════════════════════════════
-
-        // Imprime el árbol con indentación usando └── para cada nodo hijo
         private void ImprimirArbol(NodoExpresion nodo, string prefijo = "", bool esRaiz = true)
         {
             if (nodo == null) return;
 
             if (esRaiz)
-                richTextBox2.AppendText($"  Árbol: {nodo.Valor}\n");
-            else
-                richTextBox2.AppendText($"{prefijo}└── {nodo.Valor}\n");
+            {
+                string tipoRaiz = InferirTipo(nodo);
+                double? resultado = EvaluarNodo(nodo);
+                VerificarTipos(nodo);
+
+                richTextBox2.AppendText($"  ┌─ Árbol de expresión ─────────────────\n");
+                richTextBox2.AppendText($"  │  Nodo raíz  : {nodo.Valor}\n");
+                richTextBox2.AppendText($"  │  Tipo       : {tipoRaiz}\n");
+
+                if (resultado.HasValue)
+                {
+                    string resStr = (resultado.Value == Math.Floor(resultado.Value))
+                        ? ((long)resultado.Value).ToString()
+                        : resultado.Value.ToString("G", System.Globalization.CultureInfo.InvariantCulture);
+                    richTextBox2.AppendText($"  │  Evaluación : {resStr}\n");
+                }
+                else
+                {
+                    richTextBox2.AppendText($"  │  Evaluación : (no evaluable en tiempo de análisis)\n");
+                }
+
+                richTextBox2.AppendText($"  └───────────────────────────────────\n");
+                //richTextBox2.AppendText($"  Árbol: {nodo.Valor}\n");
+            }
+            //else
+            //{
+            //    richTextBox2.AppendText($"{prefijo}└── {nodo.Valor}\n");
+            //}
 
             string nuevoPrefijo = esRaiz ? "      " : prefijo + "    ";
-            ImprimirArbol(nodo.Izquierdo, nuevoPrefijo, false);
-            ImprimirArbol(nodo.Derecho, nuevoPrefijo, false);
+            //ImprimirArbol(nodo.Izquierdo, nuevoPrefijo, false);
+            //ImprimirArbol(nodo.Derecho, nuevoPrefijo, false);
         }
-
-        // ════════════════════════════════════════════════════════════════════
-        //  ANALIZADOR SINTÁCTICO DE EXPRESIONES
-        //
-        //  Gramática (basada en el diagrama del pizarrón):
-        //
-        //  Expresion  →  Operando { Operador Operando }
-        //             |  ( Expresion )
-        //
-        //  Operando   →  [++ | --] identificador [++ | --]   (prefijo/postfijo)
-        //             |  identificador ( [Expresion {, Expresion}] )  (llamada)
-        //             |  numero
-        //             |  numero_real
-        //             |  caracter
-        //             |  true | false                        (booleano)
-        //             |  ( Expresion )
-        //
-        //  Operador   →  + | - | * | / | %
-        //             |  ++ | --
-        //             |  == | != | < | > | <= | >=
-        //             |  && | ||
-        // ════════════════════════════════════════════════════════════════════
-
-        // Devuelve true si el token actual puede ser el inicio de un operando
         private bool EsInicioOperando()
         {
             return token == "numero" ||
@@ -160,7 +267,6 @@ namespace Practica2
                    token == "(";
         }
 
-        // Devuelve true si el token actual es un operador binario o unario listado en el pizarrón
         private bool EsOperador()
         {
             return token == "+" || token == "-" ||
@@ -172,12 +278,8 @@ namespace Practica2
                    token == "&&" || token == "||";
         }
 
-        // ── Operando ─────────────────────────────────────────────────────────
-        // Reconoce: prefijo++/--, identificador, postfijo++/--, llamada a función,
-        //           número, número_real, carácter, booleano, (Expresion)
         private NodoExpresion Operando()
         {
-            // Operador unario prefijo: ++ o --
             if (token == "++" || token == "--")
             {
                 string opPrefijo = token;
@@ -196,54 +298,45 @@ namespace Practica2
                 Avanzar();
                 return new NodoExpresion(opPrefijo + nombrePre);
             }
-
-            // Número entero
             if (token == "numero")
             {
                 NodoExpresion n = new NodoExpresion("numero");
+                n.ValorNumerico = valorNumericoToken;
+                n.TipoInferido = "int";
                 Avanzar();
                 return n;
             }
-
-            // Número real
             if (token == "numero_real")
             {
                 NodoExpresion n = new NodoExpresion("numero_real");
+                n.ValorNumerico = valorNumericoToken;
+                n.TipoInferido = "float";
                 Avanzar();
                 return n;
             }
-
-            // Carácter literal
             if (token == "caracter")
             {
                 NodoExpresion n = new NodoExpresion("caracter");
                 Avanzar();
                 return n;
             }
-
-            // Cadena de texto: "..."
             if (token == "Cadena")
             {
                 NodoExpresion n = new NodoExpresion("Cadena");
                 Avanzar();
                 return n;
             }
-
-            // Booleano: true o false
             if (token == "true" || token == "false")
             {
                 NodoExpresion n = new NodoExpresion(token);
                 Avanzar();
                 return n;
             }
-
-            // Identificador: variable, postfijo o llamada a función
             if (token == "identificador")
             {
                 string nombre = valorToken;
                 Avanzar();
 
-                // Llamada a función: identificador (  ...  )
                 if (token == "(")
                 {
                     if (!ExisteFuncion(nombre))
@@ -254,7 +347,6 @@ namespace Practica2
 
                     if (token != ")")
                     {
-                        // Primer argumento
                         NodoExpresion primerArg = Expresion();
                         nodoLlamada.Izquierdo = primerArg;
                         NodoExpresion actual = nodoLlamada;
@@ -276,7 +368,6 @@ namespace Practica2
                     return nodoLlamada;
                 }
 
-                // Postfijo: identificador ++  o  identificador --
                 if (token == "++" || token == "--")
                 {
                     string opPostfijo = token;
@@ -286,14 +377,12 @@ namespace Practica2
                     return new NodoExpresion(nombre + opPostfijo);
                 }
 
-                // Variable simple
                 if (!VariableDeclarada(nombre) && !ExisteFuncion(nombre))
                     Error($"La variable '{nombre}' no ha sido declarada");
 
                 return new NodoExpresion(nombre);
             }
 
-            // Subexpresión entre paréntesis: ( Expresion )
             if (token == "(")
             {
                 Avanzar();
@@ -311,10 +400,6 @@ namespace Practica2
             return new NodoExpresion("?");
         }
 
-        // ── Expresion ────────────────────────────────────────────────────────
-        // Gramática plana del pizarrón:
-        //   Expresion → Operando { Operador Operando }
-        //             | ( Expresion )
         private NodoExpresion Expresion()
         {
             NodoExpresion izq = Operando();
@@ -331,8 +416,6 @@ namespace Practica2
             return izq;
         }
 
-        // ── AnalizarExpresion ────────────────────────────────────────────────
-        // Punto de entrada: analiza la expresión y muestra su árbol
         private NodoExpresion AnalizarExpresion()
         {
             if (!EsInicioOperando())
@@ -342,13 +425,9 @@ namespace Practica2
             }
 
             NodoExpresion raiz = Expresion();
-            ImprimirArbol(raiz);
             return raiz;
-        }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  LÉXICO
-        // ════════════════════════════════════════════════════════════════════
+        }
 
         private char Tipo_caracter(int caracter)
         {
@@ -449,36 +528,50 @@ namespace Practica2
             }
         }
 
-        private void Numero_Real()
+        private void Numero_Real(string parteEntera)
         {
-            do { i_caracter = Leer.Read(); } while (Tipo_caracter(i_caracter) == 'd');
+            string valorAcum = parteEntera + ".";
+            i_caracter = Leer.Read();
+            while (Tipo_caracter(i_caracter) == 'd')
+            {
+                valorAcum += (char)i_caracter;
+                i_caracter = Leer.Read();
+            }
             Escribir.Write("numero_real\n");
+            Escribir.Write(valorAcum + "\n");
         }
 
         private void Numero()
         {
-            do { i_caracter = Leer.Read(); } while (Tipo_caracter(i_caracter) == 'd');
+            string valorAcum = "";
+            while (Tipo_caracter(i_caracter) == 'd')
+            {
+                valorAcum += (char)i_caracter;
+                i_caracter = Leer.Read();
+            }
 
             if ((char)i_caracter == '.')
-                Numero_Real();
+                Numero_Real(valorAcum);
             else
+            {
                 Escribir.Write("numero\n");
+                Escribir.Write(valorAcum + "\n");
+            }
         }
 
         private bool Comentario()
         {
-            // Peek ahead: if next char is / or *, it's a comment
             int siguiente = Leer.Peek();
 
-            if (siguiente == 47) // second '/'
+            if (siguiente == 47)
             {
-                Leer.Read(); // consume it
+                Leer.Read();
                 do { i_caracter = Leer.Read(); } while (i_caracter != 10 && i_caracter != -1);
                 return true;
             }
-            else if (siguiente == 42) // '*'
+            else if (siguiente == 42)
             {
-                Leer.Read(); // consume '*'
+                Leer.Read();
                 do
                 {
                     do
@@ -496,14 +589,9 @@ namespace Practica2
             }
             else
             {
-                // Solo '/' sin segundo carácter: es división
                 return false;
             }
         }
-
-        // ════════════════════════════════════════════════════════════════════
-        //  SINTÁCTICO — infraestructura
-        // ════════════════════════════════════════════════════════════════════
 
         private void Avanzar()
         {
@@ -518,6 +606,15 @@ namespace Practica2
 
             if (token == "identificador")
                 valorToken = Leer.ReadLine()?.Trim();
+
+            if (token == "numero" || token == "numero_real")
+            {
+                string raw = Leer.ReadLine()?.Trim();
+                double.TryParse(raw,
+                    System.Globalization.NumberStyles.Any,
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    out valorNumericoToken);
+            }
         }
 
         private void AnalizadorSintactico()
@@ -606,7 +703,6 @@ namespace Practica2
                         return 0;
                     }
 
-                    // Consumir contenido hasta '>'
                     bool tieneLibreria = false;
                     while (token != ">" && token != "Fin" && token != "LF")
                     {
@@ -704,7 +800,6 @@ namespace Practica2
             }
         }
 
-        // Dec_VGlobal: ahora usa AnalizarExpresion en lugar del loop manual
         private void Dec_VGlobal()
         {
             Avanzar();
@@ -713,7 +808,8 @@ namespace Practica2
 
             if (EsInicioOperando())
             {
-                AnalizarExpresion();
+                NodoExpresion raiz = AnalizarExpresion();
+                ImprimirArbol(raiz);
 
                 while (token == "LF") Avanzar();
 
@@ -868,14 +964,16 @@ namespace Practica2
                     case "return":
                         Avanzar();
                         if (EsInicioOperando())
-                            AnalizarExpresion();
+                        {
+                            NodoExpresion raizReturn = AnalizarExpresion();
+                            ImprimirArbol(raizReturn);
+                        }
                         if (token == ";") Avanzar();
                         else Error("Falta ';' después del return");
                         break;
 
                     case "++":
                     case "--":
-                        // Operador prefijo como sentencia: ++x; o --x;
                         AnalizarExpresion();
                         if (token == ";") Avanzar();
                         break;
@@ -886,14 +984,16 @@ namespace Practica2
 
                         if (token == "=")
                         {
-                            // Asignación: variable = Expresion ;
                             if (!VariableDeclarada(nombreUso))
                                 Error($"La variable '{nombreUso}' no ha sido declarada");
 
                             Avanzar();
 
                             if (EsInicioOperando())
-                                AnalizarExpresion();
+                            {
+                                NodoExpresion raizAsig = AnalizarExpresion();
+                                ImprimirArbol(raizAsig);
+                            }
                             else
                                 Error("Se esperaba una expresión después de '='");
 
@@ -906,7 +1006,6 @@ namespace Practica2
                         }
                         else if (token == "(")
                         {
-                            // Llamada a función como sentencia
                             if (!ExisteFuncion(nombreUso))
                                 Error($"La función '{nombreUso}' no ha sido declarada");
 
@@ -937,18 +1036,15 @@ namespace Practica2
                         }
                         else if (token == "++" || token == "--")
                         {
-                            // Postfijo como sentencia: a++;  a--;
                             if (!VariableDeclarada(nombreUso))
                                 Error($"La variable '{nombreUso}' no ha sido declarada");
 
-                            ImprimirArbol(new NodoExpresion(nombreUso + token));
                             Avanzar();
 
                             if (token == ";") Avanzar();
                         }
                         else
                         {
-                            // Uso de variable en expresión sin asignación
                             if (!VariableDeclarada(nombreUso))
                                 Error($"La variable '{nombreUso}' no ha sido declarada");
 
@@ -997,15 +1093,13 @@ namespace Practica2
             }
         }
 
-        // Validar_Expresion_Parentesis: ahora usa Expresion() en lugar del loop con contador
         private void Validar_Expresion_Parentesis()
         {
-            Avanzar(); // consumir el '(' ya verificado por quien llama
+            Avanzar();
 
             if (EsInicioOperando())
             {
                 NodoExpresion nodo = Expresion();
-                ImprimirArbol(nodo);
             }
 
             if (token != ")")
@@ -1243,10 +1337,6 @@ namespace Practica2
             }
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  EVENTOS DE INTERFAZ
-        // ════════════════════════════════════════════════════════════════════
-
         private void analizarToolStripMenuItem_Click(object sender, EventArgs e)
         {
             richTextBox2.Text = "";
@@ -1273,7 +1363,6 @@ namespace Practica2
                     case 'l': Identificador(); break;
                     case 'd': Numero(); break;
                     case 's':
-                        // Operadores de dos caracteres: == != <= >= ++ -- && ||
                         if (i_caracter == '=' || i_caracter == '!' ||
                             i_caracter == '<' || i_caracter == '>' ||
                             i_caracter == '+' || i_caracter == '-' ||
@@ -1291,7 +1380,7 @@ namespace Practica2
                                 (primero == '&' && segundo == '&') ||
                                 (primero == '|' && segundo == '|'))
                             {
-                                Leer.Read(); // consumir segundo carácter
+                                Leer.Read();
                                 string doble = ((char)primero).ToString() + ((char)segundo).ToString();
                                 Escribir.Write(doble + "\n");
                                 i_caracter = Leer.Read();
@@ -1311,15 +1400,12 @@ namespace Practica2
                         }
                         break;
                     case '/':
-                        // Puede ser comentario (//) o bloque (/* */) o división
                         if (Comentario())
                         {
                             Escribir.Write("Comentario\n");
-                            // i_caracter apunta al char después del comentario, el loop lo procesa
                         }
                         else
                         {
-                            // Es división simple: escribir '/' y avanzar
                             Escribir.Write("/\n");
                             i_caracter = Leer.Read();
                         }
@@ -1343,20 +1429,20 @@ namespace Practica2
                         i_caracter = Leer.Read();
                         break;
                     default:
-                        // Punto al inicio: .6 → numero_real válido en C
                         if (i_caracter == '.')
                         {
                             int siguiente = Leer.Peek();
                             if (siguiente >= '0' && siguiente <= '9')
                             {
-                                // leer los dígitos decimales
-                                do { i_caracter = Leer.Read(); } while (Tipo_caracter(i_caracter) == 'd');
-                                Escribir.Write("numero_real\n");
-                            }
-                            else
-                            {
-                                Error($"Símbolo inesperado '.'");
+                                string valPunto = ".";
                                 i_caracter = Leer.Read();
+                                while (Tipo_caracter(i_caracter) == 'd')
+                                {
+                                    valPunto += (char)i_caracter;
+                                    i_caracter = Leer.Read();
+                                }
+                                Escribir.Write("numero_real\n");
+                                Escribir.Write(valPunto + "\n");
                             }
                         }
                         else

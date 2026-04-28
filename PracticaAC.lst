@@ -1,4 +1,4 @@
-MPASM  5.51                    PRACTICAAA.ASM   3-21-2026  13:24:25         PAGE  1
+MPASM  5.51                    PRACTICAAC.ASM   3-21-2026  14:30:55         PAGE  1
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -46,45 +46,33 @@ Message[302]: Register in operand not in bank 0.  Ensure that bank bits are corr
                       00029 
 0006   0186           00030         clrf    PORTB
                       00031 
-0007   1406           00032         bsf PORTB,0 ;Prender LED 1 directamente
+                      00032 
                       00033 
-                      00034 
-                      00035 
+                      00034 ;****************************************************************
+                      00035 ;CICLO
                       00036 ;****************************************************************
-                      00037 ;CICLO
-                      00038 ;****************************************************************
-0008                  00039 CICLO
-0008                  00040 PRESIONAR
-0008   1C07           00041         btfss   PORTC,0
-0009   280E           00042         goto CICLOBOTON2
-MPASM  5.51                    PRACTICAAA.ASM   3-21-2026  13:24:25         PAGE  2
+0007                  00037 CICLO
+Warning[207]: Found label after column 1. (PRESIONAR)
+0007                  00038         PRESIONAR
+0007   1206           00039         bcf PORTB, 4
+0008   1C07           00040         btfss PORTC, 0
+0009   2807           00041         goto PRESIONAR
+MPASM  5.51                    PRACTICAAC.ASM   3-21-2026  14:30:55         PAGE  2
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
   VALUE
 
-                      00043 
-000A   0A86           00044         incf PORTB, 1
-                      00045 
-000B                  00046 SOLTAR
-000B   1807           00047         btfsc   PORTC,0
-000C   280B           00048         goto SOLTAR
-                      00049 
-000D   2808           00050         goto    CICLO
-                      00051 
-000E                  00052 CICLOBOTON2
-000E                  00053 PRESIONAR2
-000E   1C87           00054         btfss   PORTC,1
-000F   2808           00055         goto CICLO
-                      00056 
-0010   0386           00057         decf PORTB, 1
-0011                  00058 SOLTAR2
-0011   1887           00059         btfsc   PORTC,1
-0012   2811           00060         goto SOLTAR2
-                      00061 
-0013   2808           00062         goto    CICLO
-                      00063         END
-MPASM  5.51                    PRACTICAAA.ASM   3-21-2026  13:24:25         PAGE  3
+                      00042 
+Warning[207]: Found label after column 1. (SOLTAR)
+000A                  00043         SOLTAR
+000A   1606           00044         bsf PORTB, 4
+000B   1807           00045         btfsc PORTC, 0
+000C   280A           00046         goto SOLTAR
+                      00047 
+000D   2807           00048         goto    CICLO
+                      00049         END
+MPASM  5.51                    PRACTICAAC.ASM   3-21-2026  14:30:55         PAGE  3
 
 
 SYMBOL TABLE
@@ -136,20 +124,19 @@ CCPR2L                            0000001B
 CHS0                              00000003
 CHS1                              00000004
 CHS2                              00000005
-CICLO                             00000008
-CICLOBOTON2                       0000000E
+CICLO                             00000007
 CKE                               00000006
 CKP                               00000004
 CREN                              00000004
 CSRC                              00000007
 D                                 00000005
-MPASM  5.51                    PRACTICAAA.ASM   3-21-2026  13:24:25         PAGE  4
+DATA_ADDRESS                      00000005
+MPASM  5.51                    PRACTICAAC.ASM   3-21-2026  14:30:55         PAGE  4
 
 
 SYMBOL TABLE
   LABEL                             VALUE 
 
-DATA_ADDRESS                      00000005
 DC                                00000001
 D_A                               00000005
 D_NOT_A                           00000005
@@ -202,13 +189,13 @@ OERR                              00000001
 OPTION_REG                        00000081
 P                                 00000004
 PCFG0                             00000000
-MPASM  5.51                    PRACTICAAA.ASM   3-21-2026  13:24:25         PAGE  5
+PCFG1                             00000001
+MPASM  5.51                    PRACTICAAC.ASM   3-21-2026  14:30:55         PAGE  5
 
 
 SYMBOL TABLE
   LABEL                             VALUE 
 
-PCFG1                             00000001
 PCFG2                             00000002
 PCFG3                             00000003
 PCL                               00000002
@@ -226,8 +213,7 @@ PORTC                             00000007
 PORTD                             00000008
 PORTE                             00000009
 PR2                               00000092
-PRESIONAR                         00000008
-PRESIONAR2                        0000000E
+PRESIONAR                         00000007
 PS0                               00000000
 PS1                               00000001
 PS2                               00000002
@@ -261,14 +247,14 @@ RC5                               00000005
 RC6                               00000006
 RC7                               00000007
 RC8_9                             00000006
-MPASM  5.51                    PRACTICAAA.ASM   3-21-2026  13:24:25         PAGE  6
+RC9                               00000006
+RCD8                              00000000
+MPASM  5.51                    PRACTICAAC.ASM   3-21-2026  14:30:55         PAGE  6
 
 
 SYMBOL TABLE
   LABEL                             VALUE 
 
-RC9                               00000006
-RCD8                              00000000
 RCEN                              00000003
 RCIE                              00000005
 RCIF                              00000005
@@ -297,8 +283,7 @@ R_W                               00000002
 S                                 00000003
 SEN                               00000000
 SMP                               00000007
-SOLTAR                            0000000B
-SOLTAR2                           00000011
+SOLTAR                            0000000A
 SPBRG                             00000099
 SPEN                              00000007
 SREN                              00000005
@@ -320,15 +305,15 @@ SYNC                              00000004
 T0CS                              00000005
 T0IE                              00000005
 T0IF                              00000002
-MPASM  5.51                    PRACTICAAA.ASM   3-21-2026  13:24:25         PAGE  7
+T0SE                              00000004
+T1CKPS0                           00000004
+T1CKPS1                           00000005
+MPASM  5.51                    PRACTICAAC.ASM   3-21-2026  14:30:55         PAGE  7
 
 
 SYMBOL TABLE
   LABEL                             VALUE 
 
-T0SE                              00000004
-T1CKPS0                           00000004
-T1CKPS1                           00000005
 T1CON                             00000010
 T1INSYNC                          00000002
 T1OSCEN                           00000003
@@ -379,15 +364,15 @@ TRISC4                            00000004
 TRISC5                            00000005
 TRISC6                            00000006
 TRISC7                            00000007
-MPASM  5.51                    PRACTICAAA.ASM   3-21-2026  13:24:25         PAGE  8
+TRISD                             00000088
+TRISD0                            00000000
+TRISD1                            00000001
+MPASM  5.51                    PRACTICAAC.ASM   3-21-2026  14:30:55         PAGE  8
 
 
 SYMBOL TABLE
   LABEL                             VALUE 
 
-TRISD                             00000088
-TRISD0                            00000000
-TRISD1                            00000001
 TRISD2                            00000002
 TRISD3                            00000003
 TRISD4                            00000004
@@ -438,15 +423,15 @@ _IDLOC0                           00002000
 _IDLOC1                           00002001
 _IDLOC2                           00002002
 _IDLOC3                           00002003
-MPASM  5.51                    PRACTICAAA.ASM   3-21-2026  13:24:25         PAGE  9
+_LP_OSC                           00003FFC
+_LVP_OFF                          00003F7F
+_LVP_ON                           00003FFF
+MPASM  5.51                    PRACTICAAC.ASM   3-21-2026  14:30:55         PAGE  9
 
 
 SYMBOL TABLE
   LABEL                             VALUE 
 
-_LP_OSC                           00003FFC
-_LVP_OFF                          00003F7F
-_LVP_ON                           00003FFF
 _PWRTE_OFF                        00003FFF
 _PWRTE_ON                         00003FF7
 _RC_OSC                           00003FFF
@@ -464,16 +449,16 @@ __16F877                          00000001
 
 MEMORY USAGE MAP ('X' = Used,  '-' = Unused)
 
-0000 : XXXXXXXXXXXXXXXX XXXX------------ ---------------- ----------------
+0000 : XXXXXXXXXXXXXX-- ---------------- ---------------- ----------------
 
 All other memory blocks unused.
 
-Program Memory Words Used:    20
-Program Memory Words Free:  8172
+Program Memory Words Used:    14
+Program Memory Words Free:  8178
 
 
 Errors   :     0
-Warnings :     0 reported,     0 suppressed
+Warnings :     2 reported,     0 suppressed
 Messages :     2 reported,     0 suppressed
 
 

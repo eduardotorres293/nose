@@ -18,6 +18,7 @@ namespace Practica2
         string valorToken = "";
         private int direccionActual = 0;
         private string tipoActual = "";
+        private double valorNumericoToken;
 
         /// </summary>
         private System.ComponentModel.IContainer components = null;

@@ -1,19 +1,19 @@
 MPLINK 4.49, Linker
-Linker Map File - Created Thu Mar 12 13:17:19 2026
+Linker Map File - Created Sat Mar 21 13:24:25 2026
 
                                  Section Info
                   Section       Type    Address   Location Size(Bytes)
                 ---------  ---------  ---------  ---------  ---------
                    .org_0       code   0x000000    program   0x000000
-                   .org_1       code   0x000000    program   0x00001c
+                   .org_1       code   0x000000    program   0x000028
 
 
 
                               Program Memory Usage 
                                Start         End      
                            ---------   ---------      
-                            0x000000    0x00000d      
-            14 out of 8454 program addresses used, program memory utilization is 0%
+                            0x000000    0x000013      
+            20 out of 8454 program addresses used, program memory utilization is 0%
 
 
 
@@ -21,9 +21,12 @@ Linker Map File - Created Thu Mar 12 13:17:19 2026
                      Name    Address   Location    Storage File                     
                 ---------  ---------  ---------  --------- ---------                
                     CICLO   0x000008    program     static E:\repos\PracticaAA.asm  
+              CICLOBOTON2   0x00000e    program     static E:\repos\PracticaAA.asm  
                    INICIO   0x000000    program     static E:\repos\PracticaAA.asm  
                 PRESIONAR   0x000008    program     static E:\repos\PracticaAA.asm  
+               PRESIONAR2   0x00000e    program     static E:\repos\PracticaAA.asm  
                    SOLTAR   0x00000b    program     static E:\repos\PracticaAA.asm  
+                  SOLTAR2   0x000011    program     static E:\repos\PracticaAA.asm  
 
 
 
@@ -34,5 +37,8 @@ Linker Map File - Created Thu Mar 12 13:17:19 2026
                     CICLO   0x000008    program     static E:\repos\PracticaAA.asm  
                 PRESIONAR   0x000008    program     static E:\repos\PracticaAA.asm  
                    SOLTAR   0x00000b    program     static E:\repos\PracticaAA.asm  
+              CICLOBOTON2   0x00000e    program     static E:\repos\PracticaAA.asm  
+               PRESIONAR2   0x00000e    program     static E:\repos\PracticaAA.asm  
+                  SOLTAR2   0x000011    program     static E:\repos\PracticaAA.asm  
 
 

@@ -29,35 +29,21 @@ INICIO
 
 	clrf	PORTB
 
-	bsf PORTB,0 ;Prender LED 1 directamente
-
 
 
 ;****************************************************************
 ;CICLO
 ;****************************************************************
 CICLO
-PRESIONAR
-	btfss	PORTC,0
-	goto CICLOBOTON2
+	PRESIONAR
+	bcf PORTB, 0
+	btfss PORTC, 0
+	goto PRESIONAR
 
-	incf PORTB, 1
-
-SOLTAR
-	btfsc	PORTC,0
+	SOLTAR
+	bsf PORTB, 0
+	btfsc PORTC, 0
 	goto SOLTAR
-
-	goto	CICLO
-
-CICLOBOTON2
-PRESIONAR2
-	btfss	PORTC,1
-	goto CICLO
-
-	decf PORTB, 1
-SOLTAR2
-	btfsc	PORTC,1
-	goto SOLTAR2
 
 	goto	CICLO
 	END
