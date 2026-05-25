@@ -77,6 +77,40 @@ namespace Practica2
             TablaFunciones.Add(new SimboloFuncion("printf", "int"));
             analizarToolStripMenuItem.Enabled = false;
         }
+        private bool EsExpresionCompuesta(NodoExpresion nodo)
+        {
+            if (nodo == null) return false;
+            return nodo.Izquierdo != null || nodo.Derecho != null;
+        }
+
+        private bool TiposCompatibles(string tipoVariable, string tipoExpresion)
+        {
+            if (tipoExpresion == "?") return true;
+
+            switch (tipoVariable)
+            {
+                case "int":
+                    return tipoExpresion == "int" || tipoExpresion == "bool";
+                case "float":
+                case "double":
+                    return tipoExpresion == "float" || tipoExpresion == "int";
+                case "char":
+                    return tipoExpresion == "char" || tipoExpresion == "int" || tipoExpresion == "string";
+                case "void":
+                    return false;
+                default:
+                    return true;
+            }
+        }
+        private string ObtenerTipoVariable(string nombre)
+        {
+            foreach (var ambito in PilaAmbitos)
+            {
+                var sim = ambito.FirstOrDefault(v => v.Nombre == nombre);
+                if (sim != null) return sim.Tipo;
+            }
+            return "?";
+        }
 
         private double? EvaluarNodo(NodoExpresion nodo)
         {
@@ -481,8 +515,19 @@ namespace Practica2
         {
             i_caracter = Leer.Read();
             if (i_caracter == -1) { Error("Carácter incompleto"); return; }
-            i_caracter = Leer.Read();
-            if (i_caracter != 39) Error(39);
+
+            int contenido = i_caracter;
+            int cuenta = 0;
+            while (i_caracter != 39 && i_caracter != -1 && i_caracter != 10)
+            {
+                cuenta++;
+                i_caracter = Leer.Read();
+            }
+
+            if (i_caracter != 39)
+                Error("Falta cierre de comilla simple '");
+            else if (cuenta > 1)
+                Error($"Literal de carácter inválido: solo se permite un carácter entre comillas simples");
         }
 
         private void Archivo_Libreria()
@@ -809,7 +854,18 @@ namespace Practica2
             if (EsInicioOperando())
             {
                 NodoExpresion raiz = AnalizarExpresion();
-                ImprimirArbol(raiz);
+                if (EsExpresionCompuesta(raiz))
+                    ImprimirArbol(raiz);
+
+                string tipoExpr = InferirTipo(raiz);
+                if (!TiposCompatibles(tipoActual, tipoExpr))
+                {
+                    richTextBox2.AppendText(
+                        $"Error de tipos: no se puede inicializar variable de tipo " +
+                        $"'{tipoActual}' con valor de tipo '{tipoExpr}', " +
+                        $"línea {Numero_linea}\n");
+                    N_error++;
+                }
 
                 while (token == "LF") Avanzar();
 
@@ -859,15 +915,22 @@ namespace Practica2
 
             while (true)
             {
-                if (token != "numero" && token != "identificador")
+                if (token == "]")
                 {
-                    Error("Se esperaba tamaño del arreglo");
-                    return;
+                    Avanzar();
                 }
-                Avanzar();
+                else
+                {
+                    if (token != "numero" && token != "identificador")
+                    {
+                        Error("Se esperaba tamaño del arreglo o ']'");
+                        return;
+                    }
+                    Avanzar();
 
-                if (token != "]") { Error("Falta ']'"); return; }
-                Avanzar();
+                    if (token != "]") { Error("Falta ']'"); return; }
+                    Avanzar();
+                }
 
                 if (token == "[") { Avanzar(); continue; }
                 break;
@@ -876,48 +939,61 @@ namespace Practica2
             if (token == "=")
             {
                 Avanzar();
-                if (token != "{") { Error("Se esperaba '{' para iniciar la inicialización"); return; }
-
-                int balance = 1;
-                bool primerElemento = true;
-                Avanzar();
-
-                while (balance > 0 && token != "Fin" && token != ";")
+                if (token == "Cadena")
                 {
-                    if (token == "{")
+                    if (tipoActual != "char")
                     {
-                        if (!primerElemento) Error("Falta ',' entre sub-arreglos");
-                        balance++;
-                        primerElemento = true;
-                        Avanzar();
+                        richTextBox2.AppendText(
+                            $"Error de tipos: solo 'char[]' puede inicializarse con una cadena, línea {Numero_linea}\n");
+                        N_error++;
                     }
-                    else if (token == "}")
-                    {
-                        balance--;
-                        primerElemento = false;
-                        Avanzar();
-                    }
-                    else if (token == ",")
-                    {
-                        if (primerElemento) Error("Coma inesperada al inicio de bloque");
-                        primerElemento = true;
-                        Avanzar();
-                    }
-                    else if (token == "numero" || token == "identificador" ||
-                             token == "numero_real" || token == "caracter")
-                    {
-                        if (!primerElemento) Error("Falta ',' entre valores");
-                        primerElemento = false;
-                        Avanzar();
-                    }
-                    else
-                    {
-                        Error("Token inesperado en inicialización: " + token);
-                        Avanzar();
-                    }
+                    Avanzar();
                 }
+                else if (token == "{")
+                {
+                    if (token != "{") { Error("Se esperaba '{' para iniciar la inicialización"); return; }
 
-                if (balance > 0) Error("Falta '}' de cierre en la inicialización");
+                    int balance = 1;
+                    bool primerElemento = true;
+                    Avanzar();
+
+                    while (balance > 0 && token != "Fin" && token != ";")
+                    {
+                        if (token == "{")
+                        {
+                            if (!primerElemento) Error("Falta ',' entre sub-arreglos");
+                            balance++;
+                            primerElemento = true;
+                            Avanzar();
+                        }
+                        else if (token == "}")
+                        {
+                            balance--;
+                            primerElemento = false;
+                            Avanzar();
+                        }
+                        else if (token == ",")
+                        {
+                            if (primerElemento) Error("Coma inesperada al inicio de bloque");
+                            primerElemento = true;
+                            Avanzar();
+                        }
+                        else if (token == "numero" || token == "identificador" ||
+                                 token == "numero_real" || token == "caracter")
+                        {
+                            if (!primerElemento) Error("Falta ',' entre valores");
+                            primerElemento = false;
+                            Avanzar();
+                        }
+                        else
+                        {
+                            Error("Token inesperado en inicialización: " + token);
+                            Avanzar();
+                        }
+                    }
+
+                    if (balance > 0) Error("Falta '}' de cierre en la inicialización");
+                }
             }
 
             if (token != ";")
@@ -966,7 +1042,8 @@ namespace Practica2
                         if (EsInicioOperando())
                         {
                             NodoExpresion raizReturn = AnalizarExpresion();
-                            ImprimirArbol(raizReturn);
+                            if (EsExpresionCompuesta(raizReturn))
+                                ImprimirArbol(raizReturn);
                         }
                         if (token == ";") Avanzar();
                         else Error("Falta ';' después del return");
@@ -992,7 +1069,19 @@ namespace Practica2
                             if (EsInicioOperando())
                             {
                                 NodoExpresion raizAsig = AnalizarExpresion();
-                                ImprimirArbol(raizAsig);
+                                if (EsExpresionCompuesta(raizAsig))
+                                    ImprimirArbol(raizAsig);
+
+                                string tipoVar = ObtenerTipoVariable(nombreUso);
+                                string tipoExpr = InferirTipo(raizAsig);
+                                if (!TiposCompatibles(tipoVar, tipoExpr))
+                                {
+                                    richTextBox2.AppendText(
+                                        $"Error de tipos: no se puede asignar '{tipoExpr}' " +
+                                        $"a variable '{nombreUso}' de tipo '{tipoVar}', " +
+                                        $"línea {Numero_linea}\n");
+                                    N_error++;
+                                }
                             }
                             else
                                 Error("Se esperaba una expresión después de '='");
@@ -1417,7 +1506,7 @@ namespace Practica2
                         break;
                     case 'c':
                         Caracter();
-                        Escribir.Write("Caracter\n");
+                        Escribir.Write("caracter\n");
                         i_caracter = Leer.Read();
                         break;
                     case 'n':
